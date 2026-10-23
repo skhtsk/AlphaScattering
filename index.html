@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rutherford Alpha Scattering Experiment</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <style>
+    .glow-gold {
+      box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1f2937;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">Physics Simulation</span>
+        <span class="text-xs text-slate-400 font-medium">Atomic Physics & Structure</span>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-white mt-1">Rutherford's Alpha Particle Scattering Experiment (1911)</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <!-- Model Mode Switcher -->
+      <button id="model-toggle-btn" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-700/60 transition flex items-center gap-1.5">
+        <span>Model:</span> <span id="model-toggle-label" class="text-amber-400 font-extrabold">Rutherford Nuclear (Real)</span>
+      </button>
+      <button id="reveal-nucleus-btn" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+        Atomic Cores: <span id="reveal-nucleus-label" class="text-emerald-400 font-bold">Hidden (Realistic Foil)</span>
+      </button>
+      <button id="clear-traces-btn" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+        Clear Trails
+      </button>
+      <button id="reset-counts-btn" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800 transition">
+        Reset Counts
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left / Simulation Canvas Container (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-4">
+      
+      <!-- Canvas Box -->
+      <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        <!-- Canvas Status Bar -->
+        <div class="px-4 py-2 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <div class="flex items-center gap-2">
+            <span id="model-indicator-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Gun Position: <strong id="gun-pos-val" class="text-slate-200">Y = 140px (Straight Path)</strong></span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span>Particles Fired: <strong id="total-fired" class="text-slate-200">0</strong></span>
+            <span class="hidden sm:inline" id="model-observation-tag">Observation: <span class="text-emerald-400 font-semibold">Overwhelming majority pass straight through</span></span>
+          </div>
+        </div>
+
+        <!-- The Simulation Canvas -->
+        <div class="relative w-full h-[410px] bg-slate-950 flex items-center justify-center cursor-crosshair select-none" id="canvas-container">
+          <canvas id="simCanvas" width="720" height="400" class="w-full h-full block"></canvas>
+          
+          <!-- Instructions overlay helper -->
+          <div id="canvas-instruction-hint" class="absolute bottom-3 left-4 pointer-events-none text-[11px] text-slate-400 bg-slate-900/80 backdrop-blur px-2.5 py-1 rounded border border-slate-800">
+            💡 Nuclei occur at regular 60px intervals (Y = 80, 140, 200, 260, 320). Deflection zone is ultra-narrow (&plusmn;3px)!
+          </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="p-4 bg-slate-900 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+          <!-- Gun Slider -->
+          <div class="flex-1 min-w-[240px] flex items-center gap-3">
+            <label for="gunSlider" class="font-semibold text-slate-300 whitespace-nowrap">Alpha Gun Y:</label>
+            <input type="range" id="gunSlider" min="50" max="350" value="140" step="0.5" 
+                   class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500">
+            <div class="flex items-center gap-1">
+              <button id="aim-core-prev" type="button" title="Previous regular core" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono">
+                &uarr; Core
+              </button>
+              <button id="aim-core-next" type="button" title="Next regular core" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono">
+                &darr; Core
+              </button>
+            </div>
+          </div>
+
+          <!-- Fire Mode Buttons -->
+          <div class="flex items-center gap-2">
+            <button id="stream-btn" class="px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition flex items-center gap-1.5">
+              <span id="stream-indicator" class="w-2 h-2 rounded-full bg-slate-950 animate-ping"></span>
+              <span id="stream-btn-text">Pause Stream</span>
+            </button>
+            <button id="single-shot-btn" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+              Single Fire
+            </button>
+          </div>
+
+          <!-- Beam Width / Spread -->
+          <div class="flex items-center gap-2 text-slate-300">
+            <span>Beam:</span>
+            <button id="beam-narrow-btn" class="px-2 py-1 rounded bg-slate-800 border border-amber-500/50 text-amber-300 text-[11px] font-medium">Pinpoint</button>
+            <button id="beam-wide-btn" class="px-2 py-1 rounded bg-slate-800 hover:border-slate-600 text-slate-400 text-[11px] font-medium">Wide Beam</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Counters & Statistics -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex flex-col">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>Undeflected / Tiny ($&lt;10^\circ$)</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          </div>
+          <div class="text-2xl font-black text-emerald-400 font-mono" id="count-straight">0</div>
+          <div class="text-[11px] text-slate-400 mt-1" id="pct-straight">~99.8% of particles</div>
+        </div>
+
+        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex flex-col">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>Moderate ($10^\circ - 90^\circ$)</span>
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          </div>
+          <div class="text-2xl font-black text-amber-400 font-mono" id="count-deflected">0</div>
+          <div class="text-[11px] text-slate-400 mt-1" id="pct-deflected">Rare deflections</div>
+        </div>
+
+        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex flex-col">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>Large / Backscatter ($&gt;90^\circ$)</span>
+            <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+          </div>
+          <div class="text-2xl font-black text-rose-400 font-mono" id="count-rebound">0</div>
+          <div class="text-[11px] text-slate-400 mt-1" id="pct-rebound">~1 in 8,000 rebound!</div>
+        </div>
+      </div>
+
+      <!-- Rutherford Quote Card -->
+      <div class="bg-amber-950/20 border border-amber-800/40 rounded-xl p-4 text-xs leading-relaxed text-amber-200/90">
+        <strong class="text-amber-400 block mb-1">Ernest Rutherford's Astonishment (1911):</strong>
+        <p class="italic">"It was quite the most incredible event that has ever happened to me in my life. It was almost as incredible as if you fired a 15-inch shell at a piece of tissue paper and it came back and hit you!"</p>
+      </div>
+
+    </div>
+
+    <!-- Right / Guided Inquiry & Questions (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col">
+      
+      <!-- Student Assessment / Questions Form -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col flex-1 shadow-2xl">
+        <div class="border-b border-slate-800 pb-3 mb-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Inquiry & Deductions Questionnaire
+            </h2>
+            <span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-medium">Core Discovery</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+            Drag the alpha source directly to probe the foil. Analyze what can—and cannot—be deduced from these scattering observations.
+          </p>
+        </div>
+
+        <form id="quiz-form" class="space-y-4 overflow-y-auto max-h-[580px] pr-2 custom-scrollbar text-xs">
+          
+          <!-- Question 1 -->
+          <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <p class="font-semibold text-slate-200">1. More than $99\%$ of the alpha particles passed straight through the gold foil undeflected. What direct conclusion did Rutherford deduce from this?</p>
+            <div class="space-y-1.5 pl-1">
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q1" value="A" class="accent-amber-500">
+                <span>A. Alpha particles have zero electrical charge.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q1" value="B" class="accent-amber-500">
+                <span>B. Most of the volume of an atom consists of empty space.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q1" value="C" class="accent-amber-500">
+                <span>C. Gold atoms contain equal numbers of protons and neutrons.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Question 2 -->
+          <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <p class="font-semibold text-slate-200">2. A tiny fraction of alpha particles (about $1$ in $8,000$) were deflected through angles larger than $90^\circ$ (backscattered). What does this require?</p>
+            <div class="space-y-1.5 pl-1">
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q2" value="A" class="accent-amber-500">
+                <span>A. A massive, positively charged core concentrated in an extremely tiny volume.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q2" value="B" class="accent-amber-500">
+                <span>B. Negative electrons spread evenly throughout a spherical positive soup.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q2" value="C" class="accent-amber-500">
+                <span>C. A strong magnetic field produced by gold atoms.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Question 3 -->
+          <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <p class="font-semibold text-amber-300">3. Which of the following CANNOT be deduced from the alpha particle scattering experiment alone?</p>
+            <div class="space-y-1.5 pl-1">
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q3" value="A" class="accent-amber-500">
+                <span>A. The existence and presence of uncharged neutrons in the nucleus.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q3" value="B" class="accent-amber-500">
+                <span>B. That the positive charge is concentrated in a tiny nucleus.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q3" value="C" class="accent-amber-500">
+                <span>C. An estimate for the upper limit of the nuclear radius.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Question 4 -->
+          <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <p class="font-semibold text-slate-200">4. Can Rutherford's scattering experiment explain why orbiting electrons do not continuously radiate electromagnetic energy and spiral into the nucleus?</p>
+            <div class="space-y-1.5 pl-1">
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q4" value="A" class="accent-amber-500">
+                <span>A. Yes, it proved electron orbits are strictly quantized into stable shells.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q4" value="B" class="accent-amber-500">
+                <span>B. No, the experiment could not explain atomic stability; that required Niels Bohr's quantum model.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q4" value="C" class="accent-amber-500">
+                <span>C. Yes, it proved electrons remain completely stationary inside the atom.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Question 5 -->
+          <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <p class="font-semibold text-slate-200">5. Why must the entire alpha particle scattering apparatus be placed inside an evacuated chamber (vacuum)?</p>
+            <div class="space-y-1.5 pl-1">
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q5" value="A" class="accent-amber-500">
+                <span>A. To prevent the gold foil from oxidizing during the experiment.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q5" value="B" class="accent-amber-500">
+                <span>B. Alpha particles strongly ionize air and have a range of only ~3–5 cm, so they would be stopped by air molecules before reaching the foil.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q5" value="C" class="accent-amber-500">
+                <span>C. To eliminate the effect of Earth's gravity on moving alpha particles.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q5" value="D" class="accent-amber-500">
+                <span>D. To keep the temperature strictly at absolute zero so gold atoms do not vibrate.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Question 6 -->
+          <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <p class="font-semibold text-slate-200">6. If J.J. Thomson's "plum pudding" model of the atom were correct, what would have been observed in this experiment?</p>
+            <div class="space-y-1.5 pl-1">
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q6" value="A" class="accent-amber-500">
+                <span>A. Almost all alpha particles would bounce straight backward ($>90^\circ$).</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q6" value="B" class="accent-amber-500">
+                <span>B. Alpha particles would be scattered uniformly in all directions.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q6" value="C" class="accent-amber-500">
+                <span>C. All alpha particles would pass through with only negligibly small deflections ($<1^\circ-2^\circ$) because positive charge is spread diffusely over the whole atom.</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-amber-300">
+                <input type="radio" name="q6" value="D" class="accent-amber-500">
+                <span>D. No alpha particles could penetrate the gold foil at all.</span>
+              </label>
+            </div>
+          </div>
+
+        </form>
+
+        <!-- Check Answers & Instant Feedback Area -->
+        <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <button type="button" id="check-answers-btn" class="flex-1 py-2.5 px-4 rounded-xl font-bold bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 transition shadow-lg shadow-amber-500/20 active:scale-95">
+              Check My Answers
+            </button>
+            <button type="button" id="reset-answers-btn" class="px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+              Reset
+            </button>
+          </div>
+          <div id="feedback-summary" class="hidden p-3 rounded-xl text-xs space-y-2 border"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    // --- SIMULATION LOGIC ---
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // UI elements
+    const gunSlider = document.getElementById('gunSlider');
+    const gunPosVal = document.getElementById('gun-pos-val');
+    const streamBtn = document.getElementById('stream-btn');
+    const streamBtnText = document.getElementById('stream-btn-text');
+    const streamIndicator = document.getElementById('stream-indicator');
+    const singleShotBtn = document.getElementById('single-shot-btn');
+    const clearTracesBtn = document.getElementById('clear-traces-btn');
+    const resetCountsBtn = document.getElementById('reset-counts-btn');
+    const revealNucleusBtn = document.getElementById('reveal-nucleus-btn');
+    const revealNucleusLabel = document.getElementById('reveal-nucleus-label');
+    const beamNarrowBtn = document.getElementById('beam-narrow-btn');
+    const beamWideBtn = document.getElementById('beam-wide-btn');
+    
+    const countStraightEl = document.getElementById('count-straight');
+    const countDeflectedEl = document.getElementById('count-deflected');
+    const countReboundEl = document.getElementById('count-rebound');
+    const totalFiredEl = document.getElementById('total-fired');
+
+    // State
+    let isStreaming = true;
+    let beamSpread = 0; // 0 = pinpoint, 25 = wide beam
+    let showNucleus = false; // By default: hidden inside the gold foil!
+    let activeModel = 'rutherford'; // 'rutherford' (real 1911) or 'thomson' (hypothetical plum pudding)
+    let gunY = 140; // Initial position (passes straight through with zero deflection!)
+    let isDraggingGun = false;
+
+    const modelToggleBtn = document.getElementById('model-toggle-btn');
+    const modelToggleLabel = document.getElementById('model-toggle-label');
+    const modelObservationTag = document.getElementById('model-observation-tag');
+    const canvasInstructionHint = document.getElementById('canvas-instruction-hint');
+    const modelIndicatorDot = document.getElementById('model-indicator-dot');
+
+    let particles = [];
+    let trails = []; // permanent deflection tracks
+    const MAX_TRAILS = 120;
+
+    let countStraight = 0;
+    let countDeflected = 0;
+    let countRebound = 0;
+    let totalFired = 0;
+
+    // Regular atomic lattice in the foil at X = 420
+    // Gold nuclei occur regularly spaced at 60px intervals (Y = 80, 140, 200, 260, 320)
+    const NUCLEI_Y = [80, 140, 200, 260, 320];
+    const targetNuclei = NUCLEI_Y.map(y => ({ x: 420, y, r: 2.5 }));
+    let scatteringFlashes = [];
+
+    // Particle constructor
+    class AlphaParticle {
+      constructor(startY) {
+        this.x = 75;
+        this.y = startY;
+        this.speed = 8.5;
+        this.vx = this.speed;
+        this.vy = 0;
+        this.active = true;
+        this.history = [{ x: this.x, y: this.y }];
+        this.initialY = startY;
+        this.hasScattered = false;
+        this.recorded = false;
+      }
+
+      update() {
+        if (!this.active) return;
+
+        // Particle travels in a completely straight horizontal line until reaching the gold foil (X = 420)
+        if (!this.hasScattered && this.x >= 420) {
+          this.hasScattered = true;
+          this.x = 420;
+
+          if (activeModel === 'thomson') {
+            // THOMSON PLUM PUDDING MODEL (HYPOTHETICAL):
+            // Positive charge is distributed diffusely over the whole atom (~10^-10 m).
+            // The electric field inside the sphere is extremely weak.
+            // Result: ALL alpha particles pass straight through with only negligibly small deflections (<1° to 2°)!
+            const tinyAngleDeg = (Math.random() - 0.5) * 2.4; // between -1.2° and +1.2°
+            const tinyAngleRad = tinyAngleDeg * (Math.PI / 180);
+            this.vx = this.speed * Math.cos(tinyAngleRad);
+            this.vy = this.speed * Math.sin(tinyAngleRad);
+          } else {
+            // RUTHERFORD NUCLEAR MODEL (REAL EXPERIMENT):
+            // Find closest regular atomic nucleus
+            let nearest = targetNuclei[0];
+            let minDist = Math.abs(this.y - nearest.y);
+            for (let i = 1; i < targetNuclei.length; i++) {
+              const d = Math.abs(this.y - targetNuclei[i].y);
+              if (d < minDist) {
+                minDist = d;
+                nearest = targetNuclei[i];
+              }
+            }
+
+            const b = this.y - nearest.y; // Impact parameter relative to nearest regular nucleus
+            const absB = Math.abs(b);
+
+            // ULTRA-NARROW DEFLECTION WINDOW:
+            // Nucleus is minuscule compared to atomic spacing.
+            if (absB <= 3.8) {
+              const b0 = 5.5; // collision impact parameter scale
+              const theta = 2 * Math.atan(b0 / (2 * (absB + 0.15))); // in radians
+              const sign = b >= 0 ? 1 : -1;
+
+              this.vx = this.speed * Math.cos(sign * theta);
+              this.vy = this.speed * Math.sin(sign * theta);
+
+              // Scintillation flash at the exact regular collision site
+              scatteringFlashes.push({ x: nearest.x, y: nearest.y, r: 10, alpha: 1.0 });
+            } else {
+              // Across the vast majority of space (>94% of foil height), particles pass 100% straight!
+              this.vx = this.speed;
+              this.vy = 0;
+            }
+          }
+        }
+
+        const dt = 0.5;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        this.history.push({ x: this.x, y: this.y });
+        if (this.history.length > 55) this.history.shift();
+
+        // Check if finished path / hit boundaries
+        if (this.x < 10 || this.x > canvas.width + 20 || this.y < -30 || this.y > canvas.height + 30) {
+          this.active = false;
+          this.recordOutcome();
+        }
+      }
+
+      recordOutcome() {
+        if (this.recorded) return;
+        this.recorded = true;
+
+        // Calculate final deflection angle in degrees relative to +x
+        const angleRad = Math.atan2(this.vy, this.vx);
+        let angleDeg = Math.abs(angleRad * (180 / Math.PI));
+
+        if (this.vx < 0) {
+          // Backscattered! Angle > 90 deg
+          countRebound++;
+        } else if (angleDeg > 8) {
+          countDeflected++;
+        } else {
+          countStraight++;
+        }
+
+        updateStats();
+
+        // Save trail into persistent background trail list
+        if (trails.length >= MAX_TRAILS) {
+          trails.shift();
+        }
+        trails.push({
+          points: [...this.history],
+          color: this.vx < 0 ? 'rgba(244, 63, 94, 0.75)' : (angleDeg > 8 ? 'rgba(251, 191, 36, 0.7)' : 'rgba(16, 185, 129, 0.12)')
+        });
+      }
+
+      draw() {
+        if (!this.active) return;
+
+        // Draw particle tail
+        if (this.history.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(this.history[0].x, this.history[0].y);
+          for (let i = 1; i < this.history.length; i++) {
+            ctx.lineTo(this.history[i].x, this.history[i].y);
+          }
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+
+        // Draw alpha particle bullet (clean luminous cyan projectile)
+        ctx.save();
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function fireAlpha() {
+      totalFired++;
+      totalFiredEl.textContent = totalFired;
+
+      let startY = gunY;
+      if (beamSpread > 0) {
+        startY += (Math.random() - 0.5) * beamSpread * 2;
+      }
+      particles.push(new AlphaParticle(startY));
+    }
+
+    function updateStats() {
+      countStraightEl.textContent = countStraight;
+      countDeflectedEl.textContent = countDeflected;
+      countReboundEl.textContent = countRebound;
+
+      const total = countStraight + countDeflected + countRebound;
+      if (total > 0) {
+        const pStraight = ((countStraight / total) * 100).toFixed(1);
+        const pDeflect = ((countDeflected / total) * 100).toFixed(1);
+        const pRebound = ((countRebound / total) * 100).toFixed(2);
+        document.getElementById('pct-straight').textContent = `${pStraight}% passed through`;
+        document.getElementById('pct-deflected').textContent = `${pDeflect}% moderate deflection`;
+        document.getElementById('pct-rebound').textContent = `${pRebound}% bounced back`;
+      }
+    }
+
+    // Canvas drawing loop
+    let lastFireTime = 0;
+    function render(timestamp) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 1. Draw subtle background grid
+      ctx.strokeStyle = 'rgba(30, 41, 59, 0.5)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // 2. Draw Zinc Sulfide (ZnS) Scintillation Detector Ring (Arc on right and back)
+      ctx.beginPath();
+      ctx.arc(430, 200, 270, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+      ctx.font = '10px monospace';
+      ctx.fillText('ZnS Scintillation Screen Ring (Flash Detector)', 460, 28);
+
+      // 3. Draw Gold Foil zone
+      const foilX = 416;
+      const foilWidth = 8;
+
+      if (activeModel === 'thomson') {
+        // Thomson Plum Pudding Mode
+        if (showNucleus) {
+          // Revealed: Draw individual Plum Pudding atomic spheres with evenly distributed electrons
+          // 12 electrons arranged in concentric rings (center + inner ring of 4 + outer ring of 7)
+          const electronRings = [
+            { x: 0, y: 0 } // center
+          ];
+          // Inner ring (r = 11px, 4 electrons)
+          for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI) / 2 + Math.PI / 4;
+            electronRings.push({ x: Math.cos(angle) * 11, y: Math.sin(angle) * 11 });
+          }
+          // Outer ring (r = 20px, 7 electrons)
+          for (let i = 0; i < 7; i++) {
+            const angle = (i * 2 * Math.PI) / 7;
+            electronRings.push({ x: Math.cos(angle) * 20, y: Math.sin(angle) * 20 });
+          }
+
+          for (const n of targetNuclei) {
+            // Diffuse positive charge cloud sphere (radius 29px)
+            const plumSphereGrad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 29);
+            plumSphereGrad.addColorStop(0, 'rgba(251, 113, 133, 0.55)'); // soft rose positive core
+            plumSphereGrad.addColorStop(0.65, 'rgba(244, 63, 94, 0.35)');
+            plumSphereGrad.addColorStop(0.95, 'rgba(225, 29, 72, 0.2)');
+            plumSphereGrad.addColorStop(1, 'rgba(225, 29, 72, 0.05)');
+
+            ctx.fillStyle = plumSphereGrad;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 29, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sphere boundary
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            // Background subtle positive watermark signs representing the diffuse positive "dough"
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('+', n.x - 14, n.y - 12);
+            ctx.fillText('+', n.x + 14, n.y - 12);
+            ctx.fillText('+', n.x - 14, n.y + 12);
+            ctx.fillText('+', n.x + 14, n.y + 12);
+
+            // Evenly distributed negative electron plums (-e)
+            for (const off of electronRings) {
+              const ex = n.x + off.x;
+              const ey = n.y + off.y;
+
+              // Electron body
+              ctx.save();
+              ctx.shadowColor = '#3b82f6';
+              ctx.shadowBlur = 4;
+              ctx.beginPath();
+              ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+              ctx.fillStyle = '#60a5fa';
+              ctx.fill();
+              ctx.restore();
+
+              ctx.strokeStyle = '#1d4ed8';
+              ctx.lineWidth = 0.8;
+              ctx.stroke();
+
+              // Minus sign inside electron
+              ctx.fillStyle = '#ffffff';
+              ctx.font = 'bold 6px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText('−', ex, ey);
+            }
+          }
+
+          ctx.fillStyle = 'rgba(244, 63, 94, 0.95)';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText('Thomson Plum Pudding Atoms (Evenly Distributed −e in +Dough)', 240, 14);
+        } else {
+          // Hidden: Realistic metallic gold foil sheet
+          const foilGrad = ctx.createLinearGradient(foilX - 4, 0, foilX + foilWidth + 4, 0);
+          foilGrad.addColorStop(0, 'rgba(251, 191, 36, 0.2)');
+          foilGrad.addColorStop(0.5, 'rgba(244, 63, 94, 0.45)');
+          foilGrad.addColorStop(1, 'rgba(251, 191, 36, 0.25)');
+
+          ctx.fillStyle = foilGrad;
+          ctx.fillRect(foilX - 2, 15, foilWidth + 4, canvas.height - 30);
+          ctx.strokeStyle = 'rgba(244, 63, 94, 0.6)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(foilX - 2, 15, foilWidth + 4, canvas.height - 30);
+
+          ctx.fillStyle = 'rgba(244, 63, 94, 0.9)';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('Gold Foil (Thomson Plum Pudding Matrix)', 310, 14);
+        }
+      } else {
+        // Realistic Rutherford Gold Foil Ribbon (semi-translucent golden leaf)
+        const foilGrad = ctx.createLinearGradient(foilX, 0, foilX + foilWidth, 0);
+        foilGrad.addColorStop(0, 'rgba(251, 191, 36, 0.25)');
+        foilGrad.addColorStop(0.5, 'rgba(253, 224, 71, 0.65)');
+        foilGrad.addColorStop(1, 'rgba(217, 119, 6, 0.3)');
+
+        ctx.fillStyle = foilGrad;
+        ctx.fillRect(foilX, 15, foilWidth, canvas.height - 30);
+
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(foilX, 15, foilWidth, canvas.height - 30);
+
+        // Gold Foil Label
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Gold Foil (~400 nm thin leaf)', 340, 14);
+
+        // If user toggles "Reveal Nuclei" for pedagogical verification
+        if (showNucleus) {
+          for (const n of targetNuclei) {
+            const radGrad = ctx.createRadialGradient(n.x, n.y, 1, n.x, n.y, 22);
+            radGrad.addColorStop(0, 'rgba(245, 158, 11, 0.45)');
+            radGrad.addColorStop(0.6, 'rgba(245, 158, 11, 0.1)');
+            radGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+            ctx.fillStyle = radGrad;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.save();
+            ctx.shadowColor = '#f59e0b';
+            ctx.shadowBlur = 6;
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '8px monospace';
+            ctx.fillText(`+Au (Y=${n.y})`, n.x + 6, n.y - 3);
+          }
+        }
+      }
+
+      // 4. Draw persistent trails
+      for (const t of trails) {
+        if (t.points.length < 2) continue;
+        ctx.beginPath();
+        ctx.moveTo(t.points[0].x, t.points[0].y);
+        for (let i = 1; i < t.points.length; i++) {
+          ctx.lineTo(t.points[i].x, t.points[i].y);
+        }
+        ctx.strokeStyle = t.color;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Draw momentary scattering flashes at the exact collision point
+      for (let i = scatteringFlashes.length - 1; i >= 0; i--) {
+        const f = scatteringFlashes[i];
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(251, 191, 36, ${f.alpha})`;
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.restore();
+        f.alpha -= 0.08;
+        f.r += 0.8;
+        if (f.alpha <= 0) scatteringFlashes.splice(i, 1);
+      }
+
+      // 5. Update & draw active particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update();
+        p.draw();
+        if (!p.active) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // 6. Draw Vertical Guide Track & Directly Draggable Alpha Gun
+      ctx.save();
+
+      // Guide rail for dragging
+      ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(32, 50);
+      ctx.lineTo(32, 350);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Gun nozzle/collimator
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(48, gunY - 7, 26, 14);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(48, gunY - 7, 26, 14);
+
+      // Gun Lead Box (Interactive Draggable Body)
+      ctx.fillStyle = isDraggingGun ? '#d97706' : '#1e293b';
+      ctx.strokeStyle = isDraggingGun ? '#f59e0b' : '#94a3b8';
+      ctx.lineWidth = isDraggingGun ? 2.5 : 2;
+      ctx.beginPath();
+      ctx.roundRect(10, gunY - 26, 44, 52, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Glowing drag handle bar
+      ctx.fillStyle = isDraggingGun ? '#fef08a' : '#f59e0b';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('α', 32, gunY);
+
+      // Explicit "DRAG ↕" helper badge
+      ctx.fillStyle = isDraggingGun ? '#ffffff' : '#cbd5e1';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText('DRAG ↕', 32, gunY - 17);
+      ctx.fillText(`Y:${Math.round(gunY)}`, 32, gunY + 17);
+      ctx.restore();
+
+      // Continuous particle spawning
+      if (isStreaming && timestamp - lastFireTime > 75) {
+        fireAlpha();
+        lastFireTime = timestamp;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    // Start animation loop
+    requestAnimationFrame(render);
+
+    // --- INTERACTION & EVENT LISTENERS ---
+    function setGunY(newY) {
+      gunY = Math.max(50, Math.min(350, newY));
+      if (gunSlider) gunSlider.value = gunY;
+      if (gunPosVal) gunPosVal.textContent = `Y = ${Math.round(gunY)}px`;
+    }
+
+    gunSlider.addEventListener('input', (e) => {
+      setGunY(parseFloat(e.target.value));
+    });
+
+    const aimCorePrev = document.getElementById('aim-core-prev');
+    const aimCoreNext = document.getElementById('aim-core-next');
+
+    if (aimCorePrev) {
+      aimCorePrev.addEventListener('click', () => {
+        const lower = NUCLEI_Y.filter(y => y < gunY - 0.5);
+        if (lower.length > 0) {
+          setGunY(lower[lower.length - 1]);
+        } else {
+          setGunY(NUCLEI_Y[0]);
+        }
+      });
+    }
+
+    if (aimCoreNext) {
+      aimCoreNext.addEventListener('click', () => {
+        const higher = NUCLEI_Y.filter(y => y > gunY + 0.5);
+        if (higher.length > 0) {
+          setGunY(higher[0]);
+        } else {
+          setGunY(NUCLEI_Y[NUCLEI_Y.length - 1]);
+        }
+      });
+    }
+
+    // Helper to calculate canvas coordinates from mouse/touch event
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    // Direct drag interaction on the alpha gun
+    canvas.addEventListener('mousemove', (e) => {
+      const pos = getCanvasPos(e);
+      if (pos.x <= 130) {
+        canvas.style.cursor = isDraggingGun ? 'grabbing' : 'grab';
+      } else {
+        canvas.style.cursor = 'crosshair';
+      }
+
+      if (isDraggingGun) {
+        setGunY(pos.y);
+      }
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pos = getCanvasPos(e);
+      // Click or drag anywhere in the left source column
+      if (pos.x <= 140) {
+        isDraggingGun = true;
+        canvas.style.cursor = 'grabbing';
+        setGunY(pos.y);
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDraggingGun) return;
+      const pos = getCanvasPos(e);
+      setGunY(pos.y);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDraggingGun) {
+        isDraggingGun = false;
+        canvas.style.cursor = 'crosshair';
+      }
+    });
+
+    // Touch support for direct dragging on touch devices
+    canvas.addEventListener('touchstart', (e) => {
+      const pos = getCanvasPos(e);
+      if (pos.x <= 150) {
+        isDraggingGun = true;
+        setGunY(pos.y);
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!isDraggingGun) return;
+      const pos = getCanvasPos(e);
+      setGunY(pos.y);
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', () => {
+      isDraggingGun = false;
+    });
+
+    // Update reveal button label according to model & state
+    function updateRevealButtonLabel() {
+      if (activeModel === 'thomson') {
+        revealNucleusLabel.textContent = showNucleus ? 'Revealed (Plum Puddings)' : 'Hidden (Foil View)';
+        revealNucleusLabel.className = showNucleus ? 'text-pink-400 font-bold' : 'text-emerald-400 font-bold';
+      } else {
+        revealNucleusLabel.textContent = showNucleus ? 'Revealed (+Core at Y=200)' : 'Hidden (Realistic Foil)';
+        revealNucleusLabel.className = showNucleus ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold';
+      }
+    }
+
+    // Model Mode Toggle (Rutherford vs Thomson Plum Pudding)
+    modelToggleBtn.addEventListener('click', () => {
+      activeModel = activeModel === 'rutherford' ? 'thomson' : 'rutherford';
+      
+      if (activeModel === 'thomson') {
+        modelToggleLabel.textContent = 'Thomson Plum Pudding (Hypothetical)';
+        modelToggleLabel.className = 'text-pink-400 font-extrabold';
+        modelObservationTag.innerHTML = 'Observation: <span class="text-pink-400 font-semibold">100% pass through with negligible deflection (&lt;1°–2°)</span>';
+        canvasInstructionHint.textContent = '💡 Plum Pudding Model: Positive charge is diffuse. Zero large deflections or rebounds occur!';
+        modelIndicatorDot.className = 'w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse';
+      } else {
+        modelToggleLabel.textContent = 'Rutherford Nuclear (Real)';
+        modelToggleLabel.className = 'text-amber-400 font-extrabold';
+        modelObservationTag.innerHTML = 'Observation: <span class="text-emerald-400 font-semibold">Overwhelming majority pass straight through</span>';
+        canvasInstructionHint.textContent = '💡 Nuclei occur at regular 60px intervals (Y = 80, 140, 200, 260, 320). Deflection zone is ultra-narrow (±3px)!';
+        modelIndicatorDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+      }
+
+      updateRevealButtonLabel();
+
+      // Reset particles & counts to highlight the dramatic contrast
+      trails = [];
+      particles = [];
+      countStraight = 0;
+      countDeflected = 0;
+      countRebound = 0;
+      totalFired = 0;
+      totalFiredEl.textContent = '0';
+      updateStats();
+    });
+
+    // Controls
+    streamBtn.addEventListener('click', () => {
+      isStreaming = !isStreaming;
+      if (isStreaming) {
+        streamBtnText.textContent = 'Pause Stream';
+        streamBtn.className = 'px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition flex items-center gap-1.5';
+        streamIndicator.classList.add('animate-ping');
+      } else {
+        streamBtnText.textContent = 'Resume Stream';
+        streamBtn.className = 'px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5';
+        streamIndicator.classList.remove('animate-ping');
+      }
+    });
+
+    singleShotBtn.addEventListener('click', () => {
+      fireAlpha();
+    });
+
+    clearTracesBtn.addEventListener('click', () => {
+      trails = [];
+      particles = [];
+    });
+
+    resetCountsBtn.addEventListener('click', () => {
+      countStraight = 0;
+      countDeflected = 0;
+      countRebound = 0;
+      totalFired = 0;
+      totalFiredEl.textContent = '0';
+      updateStats();
+      trails = [];
+      particles = [];
+    });
+
+    revealNucleusBtn.addEventListener('click', () => {
+      showNucleus = !showNucleus;
+      updateRevealButtonLabel();
+    });
+
+    beamNarrowBtn.addEventListener('click', () => {
+      beamSpread = 0;
+      beamNarrowBtn.className = 'px-2 py-1 rounded bg-slate-800 border border-amber-500/50 text-amber-300 text-[11px] font-medium';
+      beamWideBtn.className = 'px-2 py-1 rounded bg-slate-800 hover:border-slate-600 text-slate-400 text-[11px] font-medium';
+    });
+
+    beamWideBtn.addEventListener('click', () => {
+      beamSpread = 35;
+      beamWideBtn.className = 'px-2 py-1 rounded bg-slate-800 border border-amber-500/50 text-amber-300 text-[11px] font-medium';
+      beamNarrowBtn.className = 'px-2 py-1 rounded bg-slate-800 hover:border-slate-600 text-slate-400 text-[11px] font-medium';
+    });
+
+
+    // --- QUIZ CHECK & EXPLANATION LOGIC ---
+    const correctAnswers = {
+      q1: {
+        val: 'B',
+        exp: 'Since over 99% of alpha particles pass through without feeling any repulsive force or collision, Rutherford deduced that the atom is overwhelmingly empty space.'
+      },
+      q2: {
+        val: 'A',
+        exp: 'Alpha particles are fast and massive ($4\\text{ amu}$, $+2e$). Deflecting them backwards requires an enormous electrostatic force, meaning positive charge and almost all mass are concentrated in a tiny nucleus.'
+      },
+      q3: {
+        val: 'A',
+        exp: 'Neutrons have ZERO electrical charge and thus produce no Coulomb deflection on alpha particles! Rutherford could not detect neutrons here; James Chadwick discovered the neutron in 1932.'
+      },
+      q4: {
+        val: 'B',
+        exp: 'According to classical electrodynamics, accelerating charges radiate electromagnetic waves and should spiral into the nucleus within nanoseconds. Rutherford could not explain atomic stability; Niels Bohr solved this in 1913 with quantized orbits.'
+      },
+      q5: {
+        val: 'B',
+        exp: 'Alpha particles are heavily ionizing helium nuclei with a very short range in air (~3 to 5 cm). Without an evacuated chamber (vacuum), air molecules would absorb or scatter the alpha particles before they could reach the gold foil.'
+      },
+      q6: {
+        val: 'C',
+        exp: 'In Thomson\'s plum pudding model, positive charge was presumed to be smeared uniformly across the entire atomic volume ($r \\sim 10^{-10}\\text{ m}$). The resulting electric field would be far too weak to cause large deflections, so all particles would pass almost straight through ($< 1^\\circ$).'
+      }
+    };
+
+    const checkBtn = document.getElementById('check-answers-btn');
+    const resetBtn = document.getElementById('reset-answers-btn');
+    const feedbackBox = document.getElementById('feedback-summary');
+
+    checkBtn.addEventListener('click', () => {
+      const q1Val = document.querySelector('input[name="q1"]:checked')?.value;
+      const q2Val = document.querySelector('input[name="q2"]:checked')?.value;
+      const q3Val = document.querySelector('input[name="q3"]:checked')?.value;
+      const q4Val = document.querySelector('input[name="q4"]:checked')?.value;
+      const q5Val = document.querySelector('input[name="q5"]:checked')?.value;
+      const q6Val = document.querySelector('input[name="q6"]:checked')?.value;
+
+      if (!q1Val || !q2Val || !q3Val || !q4Val || !q5Val || !q6Val) {
+        feedbackBox.classList.remove('hidden');
+        feedbackBox.className = 'p-3 rounded-xl text-xs bg-amber-950/40 border border-amber-800/60 text-amber-200';
+        feedbackBox.innerHTML = '<strong>⚠️ Incomplete:</strong> Please answer all 6 questions before checking!';
+        return;
+      }
+
+      let score = 0;
+      if (q1Val === correctAnswers.q1.val) score++;
+      if (q2Val === correctAnswers.q2.val) score++;
+      if (q3Val === correctAnswers.q3.val) score++;
+      if (q4Val === correctAnswers.q4.val) score++;
+      if (q5Val === correctAnswers.q5.val) score++;
+      if (q6Val === correctAnswers.q6.val) score++;
+
+      feedbackBox.classList.remove('hidden');
+      feedbackBox.className = score === 6 
+        ? 'p-3.5 rounded-xl text-xs bg-emerald-950/40 border border-emerald-800/60 text-emerald-100 space-y-2'
+        : 'p-3.5 rounded-xl text-xs bg-slate-800/80 border border-slate-700 text-slate-200 space-y-2';
+
+      let detailsHtml = `
+        <div class="flex items-center justify-between font-bold border-b border-slate-700/60 pb-2">
+          <span class="${score === 6 ? 'text-emerald-400' : 'text-amber-400'}">Score: ${score}/6 Correct</span>
+          <span>${score === 6 ? '🎉 Perfect Score!' : 'Review Key Explanations'}</span>
+        </div>
+        <div class="space-y-1.5 pt-1 text-[11px] leading-relaxed">
+          <div><strong class="${q1Val === 'B' ? 'text-emerald-400' : 'text-rose-400'}">Q1 (${q1Val === 'B' ? 'Correct' : 'Incorrect'}):</strong> ${correctAnswers.q1.exp}</div>
+          <div><strong class="${q2Val === 'A' ? 'text-emerald-400' : 'text-rose-400'}">Q2 (${q2Val === 'A' ? 'Correct' : 'Incorrect'}):</strong> ${correctAnswers.q2.exp}</div>
+          <div><strong class="${q3Val === 'A' ? 'text-emerald-400' : 'text-rose-400'}">Q3 (${q3Val === 'A' ? 'Correct' : 'Incorrect'}):</strong> ${correctAnswers.q3.exp}</div>
+          <div><strong class="${q4Val === 'B' ? 'text-emerald-400' : 'text-rose-400'}">Q4 (${q4Val === 'B' ? 'Correct' : 'Incorrect'}):</strong> ${correctAnswers.q4.exp}</div>
+          <div><strong class="${q5Val === 'B' ? 'text-emerald-400' : 'text-rose-400'}">Q5 (${q5Val === 'B' ? 'Correct' : 'Incorrect'}):</strong> ${correctAnswers.q5.exp}</div>
+          <div><strong class="${q6Val === 'C' ? 'text-emerald-400' : 'text-rose-400'}">Q6 (${q6Val === 'C' ? 'Correct' : 'Incorrect'}):</strong> ${correctAnswers.q6.exp}</div>
+        </div>
+      `;
+
+      feedbackBox.innerHTML = detailsHtml;
+
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(feedbackBox, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
+      feedbackBox.classList.add('hidden');
+      feedbackBox.innerHTML = '';
+    });
+
+    // Auto-render KaTeX math formulas
+    document.addEventListener("DOMContentLoaded", function () {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    });
+  </script>
+</body>
+</html>
